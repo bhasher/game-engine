@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Game</title>
+    <link rel="stylesheet" href="./global.css"/>
+  </head>
+  <body>
+    <canvas id='glCanvas' width="2560" height="1440"></canvas>
+    <script>
+      var game = require('./game');
+      document.onload = game.start();
+    </script>
+  </body>
+</html>

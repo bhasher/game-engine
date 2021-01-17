@@ -4,8 +4,7 @@
   "description": "",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron .",
-    "build": "webpack"
+    "start": "electron ."
   },
   "author": "Brandon Hasher",
   "email": "bhasher@hasher.tech",

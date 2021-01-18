@@ -1,5 +1,10 @@
 class Input {
   constructor() {
+    const canvas = document.querySelector("#glCanvas");
+    canvas.requestPointerLock()
+    
+    this.bStealingMouse = true;
+
     this.keybindings = [
       { name: 'forward', key: 'w' },
       { name: 'back', key: 's' },
@@ -15,14 +20,18 @@ class Input {
 
     var mouseX = 0;
     this.getMouseX = () => {
-      var val = -mouseX;
+      var val = 0;
+      if (this.bStealingMouse)
+        val = -mouseX;
       mouseX = 0;
       return val;
     }
 
     var mouseY = 0;
     this.getMouseY = () => {
-      var val = -mouseY;
+      var val = 0;
+      if (this.bStealingMouse)
+        val = -mouseY;
       mouseY = 0;
       return val;
     }
@@ -38,20 +47,25 @@ class Input {
       var keybinding = this.getBindingByKey(event.key);
       if (keybinding) {
         keybinding.isDown = true;
+        keybinding.pressed = true;
+        keybinding.released = false;
       }
     }
     this.handleKeyUpEvent = event => {
       var keybinding = this.getBindingByKey(event.key);
       if (keybinding) {
         keybinding.isDown = false;
+        keybinding.pressed = false;
+        keybinding.released = true;
       }
+    }
+    this.handleClick = event => {
+      this.bStealingMouse = !this.bStealingMouse;
+      this.bStealingMouse ? canvas.requestPointerLock() : document.exitPointerLock();
     }
     this.handleMouseMove = event => {
       mouseX += event.movementX;
       mouseY += event.movementY;
-      var canvas = document.querySelector("#glCanvas");
-      canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
-      canvas.requestPointerLock();
     }
     this.flush = () => {
       this.keybindings.forEach(x => {
@@ -70,10 +84,8 @@ class Input {
     }
     document.addEventListener('keydown', this.handleKeyDownEvent);
     document.addEventListener('keyup', this.handleKeyUpEvent);
+    document.addEventListener('click', this.handleClick);
     document.addEventListener('mousemove', this.handleMouseMove);
-
-    
-
   }
 };
 

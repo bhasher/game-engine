@@ -1,20 +1,40 @@
-const { app, BrowserWindow, Menu, ipcMain, protocol, Notification, screen, globalShortcut } = require('electron')
+/*
+const electron = require('electron');
+
+const { app } = electron;
+const { BrowserWindow } = electron;
+const { screen } = electron;
+const { globalShortcut } = electron;
+
+*/
+
+const { app, BrowserWindow, screen, globalShortcut } = require('electron');
+
+/** @type {Boolean} */
+const test = process.argv.includes('--test');
 
 app.whenReady().then(()=> {
+
   const {width, height} = screen.getPrimaryDisplay().workAreaSize;
 
+  const windowTemplate = (test) => {
+    return {
+      width: test ? width : 1400,
+      height: test ? height : 600,
+      frame: false,
+      fullscreenable: test,
+      fullscreen: test,
+      webPreferences: {
+        nodeIntegration: true
+      }
+    } 
+  }
+
   /** @type {BrowserWindow} */
-  const window = new BrowserWindow({
-    width: width,
-    height: height,
-    frame: false,
-    titleBarStyle: 'hidden',
-    fullscreenable: true,
-    fullscreen: true,
-    webPreferences: {
-      nodeIntegration: true
-    }
-  });
+  const window = new BrowserWindow(windowTemplate(test));
+
+  if (!test)
+    window.webContents.openDevTools();
 
   window.loadFile('src/app/index.html')
 

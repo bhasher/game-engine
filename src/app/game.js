@@ -24,7 +24,7 @@ class Game {
         attribs: ['aPosition', 'aNormal', 'aTextureUV'],
         uniforms: [
           'uProjectionMatrix', 'uViewMatrix', 'uModelMatrix',
-          'uSampler', 'uTextureScale'
+          'uSampler', 'uTextureScale', 'uLightPosition', 'uViewPosition'
         ],
         data: [{
           file: 'cube.vert',
@@ -80,7 +80,7 @@ class Game {
       const allAttribs = ['aPosition', 'aNormal', 'aTextureUV'];
       const allUniforms = [
         'uProjectionMatrix', 'uViewMatrix', 'uModelMatrix',
-        'uSampler', 'uTextureScale', 'uViewPosition'
+        'uSampler', 'uTextureScale', 'uViewPosition', 'uLightPosition'
       ]
 
       allAttribs.forEach(attrib => {
@@ -194,8 +194,8 @@ class Game {
     /* CUBES */
 
     var gameObjects = [];
-    for (var x = -15; x <= 15; x+=2) {
-      for (var z = -15; z <= 15; z+=2) {
+    for (var x = -16; x <= 16; x+=2) {
+      for (var z = -16; z <= 16; z+=2) {
         gameObjects.push({
           position: [x, -3, z],
           texture: textures.floor,
@@ -231,8 +231,10 @@ class Game {
 
   /* The sun! */
 
+    const lightPosition = [-25, 20, 5];
+
     gameObjects.push({
-      position: [-10, 15, -17],
+      position: lightPosition,
       texture: textures.sun,
       scale: [-5, -5, -5],
       rotation: [0, 0, 90],
@@ -240,6 +242,7 @@ class Game {
     });
 
 
+    
     // --------------------------------------------------------------------------------------------
     // Loop
 
@@ -358,8 +361,11 @@ class Game {
         gl.uniformMatrix4fv(gameObj.shader.uViewMatrix, false, viewMatrix);
         gl.uniformMatrix4fv(gameObj.shader.uModelMatrix, false, modelMatrix);
 
-        //if (gameObj.shader.uViewPosition)
-        //  gl.uniform3fv(gameObj.shader.uViewPosition, false, camera.position);
+        if (gameObj.shader.uViewPosition)
+          gl.uniform3fv(gameObj.shader.uViewPosition, camera.position);
+
+        if (gameObj.shader.uLightPosition)
+          gl.uniform3fv(gameObj.shader.ulightPosition, lightPosition);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, gameObj.texture.texture);

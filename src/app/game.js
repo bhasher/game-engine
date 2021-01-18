@@ -15,57 +15,86 @@ class Game {
       return;
     }
 
+
     // --------------------------------------------------------------------------------------------
     // SHADERS
 
-    const shader = {};
-    shader.data = [{
-      file: 'cube.vert',
-      type: gl.VERTEX_SHADER
-    }, {
-      file: 'cube.frag',
-      type: gl.FRAGMENT_SHADER,
-    }].map(x => {
-      x.src = fs.readFileSync(`${__dirname}/${x.file}`);
-      return x;
-    });
+    const shaders = {
+      cube: {
+        attribs: ['aPosition', 'aNormal', 'aTextureUV'],
+        uniforms: [
+          'uProjectionMatrix', 'uViewMatrix', 'uModelMatrix',
+          'uSampler', 'uTextureScale'
+        ],
+        data: [{
+          file: 'cube.vert',
+          src: fs.readFileSync(`${__dirname}/shaders/cube.vert`),
+          type: gl.VERTEX_SHADER
+        }, {
+          file: 'cube.frag',
+          src: fs.readFileSync(`${__dirname}/shaders/cube.frag`),
+          type: gl.FRAGMENT_SHADER,
+        }]
+      },
+      basic: {
+        attribs: ['aPosition', 'aTextureUV'],
+        uniforms: [
+          'uProjectionMatrix', 'uViewMatrix', 'uModelMatrix', 
+          'uSampler', 'uTextureScale'
+        ],
+        data: [{
+          file: 'basic.vert',
+          src: fs.readFileSync(`${__dirname}/shaders/basic.vert`),
+          type: gl.VERTEX_SHADER
+        }, {
+          file: 'basic.frag',
+          src: fs.readFileSync(`${__dirname}/shaders/basic.frag`),
+          type: gl.FRAGMENT_SHADER,
+        }]
+      }
+    };
 
-    shader.program = gl.createProgram();
+    [shaders.cube, shaders.basic].forEach(shader=>{
+      shader.program = gl.createProgram();
 
-    shader.data.forEach(x => {
-      x.shader = gl.createShader(x.type);
-      gl.shaderSource(x.shader, x.src);
-      gl.compileShader(x.shader);
-      gl.attachShader(shader.program, x.shader);
-    });
-
-    gl.linkProgram(shader.program);
-
-    if (!gl.getProgramParameter(shader.program, gl.LINK_STATUS)) {
       shader.data.forEach(x => {
-        if (!gl.getShaderParameter(x.shader, gl.COMPILE_STATUS)) {
-          console.error(`Shader Compile Error: ${x.file}: ${gl.getShaderInfoLog(x.shader)}`);
-          gl.deleteShader(x.shader);
-        }
+        x.shader = gl.createShader(x.type);
+        gl.shaderSource(x.shader, x.src);
+        gl.compileShader(x.shader);
+        gl.attachShader(shader.program, x.shader);
       });
-      console.error(gl.getProgramInfoLog(shader.program));
-      return null;
-    }
+  
+      gl.linkProgram(shader.program);
+  
+      if (!gl.getProgramParameter(shader.program, gl.LINK_STATUS)) {
+        shader.data.forEach(x => {
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            console.error(`Shader Compile Error: ${x.file}: ${gl.getShaderInfoLog(shader)}`);
+            gl.deleteShader(shader);
+          }
+        });
+        console.error(gl.getProgramInfoLog(shader.program));
+        return null;
+      }
+  
+      const allAttribs = ['aPosition', 'aNormal', 'aTextureUV'];
+      const allUniforms = [
+        'uProjectionMatrix', 'uViewMatrix', 'uModelMatrix',
+        'uSampler', 'uTextureScale', 'uViewPosition'
+      ]
 
-    shader.aPosition = gl.getAttribLocation(shader.program, 'aPosition');
-    shader.aNormal = gl.getAttribLocation(shader.program, 'aNormal');
-    shader.aTextureUV = gl.getAttribLocation(shader.program, 'aTextureUV');
+      allAttribs.forEach(attrib => {
+        if (shader.attribs.includes(attrib))
+          shader[attrib] = gl.getAttribLocation(shader.program, attrib);
+      });
 
-    shader.uProjectionMatrix = gl.getUniformLocation(shader.program, 'uProjectionMatrix');
-    shader.uViewMatrix = gl.getUniformLocation(shader.program, 'uViewMatrix');
-    shader.uModelMatrix = gl.getUniformLocation(shader.program, 'uModelMatrix');
-    shader.uNormalMatrix = gl.getUniformLocation(shader.program, 'uNormalMatrix');
+      allUniforms.forEach(uniform => {
+        if (shader.uniforms.includes(uniform))
+          shader[uniform] = gl.getUniformLocation(shader.program, uniform);
+      })
+    }); 
 
-    shader.uSampler = gl.getUniformLocation(shader.program, 'uSampler');
-    shader.uTextureScale = gl.getUniformLocation(shader.program, 'uTextureScale');
-    shader.uViewPosition = gl.getUniformLocation(shader.program, 'uViewPosition');
-
-    console.log(shader);
+    console.log(shaders);
 
     // --------------------------------------------------------------------------------------------
     // BUFFERS
@@ -79,6 +108,23 @@ class Game {
     const normalBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube.normal), gl.STATIC_DRAW);
+
+    const textureUVBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureUVBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube.uv), gl.STATIC_DRAW);
+
+    const indiciesBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indiciesBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cube.index), gl.STATIC_DRAW);
+
+    gl.clearColor(0.1, 0.0, 0.8, 1.0);
+    gl.clearDepth(1);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+
+
+    // --------------------------------------------------------------------------------------------
+    // Textures
 
     const textures = {
       floor: {
@@ -130,18 +176,6 @@ class Game {
       image.src = x.file;
     });
 
-    const textureUVBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, textureUVBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube.uv), gl.STATIC_DRAW);
-
-    const indiciesBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indiciesBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cube.index), gl.STATIC_DRAW);
-
-    gl.clearColor(0.1, 0.0, 0.8, 1.0);
-    gl.clearDepth(1);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
 
     // -------------------------------------------------------------------------------------------
     // Object Models
@@ -156,12 +190,17 @@ class Game {
       zFar: 100
     };
 
+
+    /* CUBES */
+
     var gameObjects = [];
     for (var x = -15; x <= 15; x+=2) {
       for (var z = -15; z <= 15; z+=2) {
         gameObjects.push({
           position: [x, -3, z],
-          texture: textures.floor
+          texture: textures.floor,
+          shader: shaders.cube,
+          scale: [1, 1, 1]
         });
       }
     };
@@ -169,29 +208,40 @@ class Game {
     for (var z = -15; z <= 15; z+=2) {
       gameObjects.push({
         position: [-15, -1, z],
-        texture: textures.wall
+        texture: textures.wall,
+        shader: shaders.cube
       });
       gameObjects.push({
         position: [15, -1, z],
-        texture: textures.wall
+        texture: textures.wall,
+        shader: shaders.cube
       });
     };
 
-    for (var y = -1; y < 4; y+=2) {
+    for (var y = -1; y <= 3; y+=2) {
       [[3,2],[8,7],[2,-5]].forEach(pair=>{
         gameObjects.push({
           position: [ pair[0], y, pair[1] ],
-          texture: textures.wall
+          texture: textures.wall,
+          shader: shaders.cube
         });
       });
     }
+
+
+  /* The sun! */
 
     gameObjects.push({
       position: [-10, 15, -17],
       texture: textures.sun,
       scale: [-5, -5, -5],
-      rotation: [0, 0, 90]
+      rotation: [0, 0, 90],
+      shader: shaders.basic
     });
+
+
+    // --------------------------------------------------------------------------------------------
+    // Loop
 
     var then = 0;
     var delta = {
@@ -199,23 +249,20 @@ class Game {
       s: 0
     };
 
-    // --------------------------------------------------------------------------------------------
-    // Loop
     const loop = now => {
       delta.ms = now - then;
       delta.s = delta.ms / 1000;
       then = now;
 
-      /*
       if (canvas.width != canvas.clientWidth || canvas.clientHeight != canvas.clientHeight) {
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
 
         gl.viewport(0, 0, canvas.width, canvas.height);
       }
-      */
 
-      // Handle Input
+      // ------------------------------------------------------------------------------------------
+      // Input & Movement
 
       const moveDirection = vec3.fromValues(0, 0, 0);
 
@@ -263,23 +310,29 @@ class Game {
           camera.position[2] = -14;
       }
 
+
+      // ------------------------------------------------------------------------------------------
+      // Render Game Objects
+
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      gameObjects.forEach(x => {
+      gameObjects.forEach(gameObj => {
 
-        gl.useProgram(shader.program);
+        gl.useProgram(gameObj.shader.program);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.vertexAttribPointer(shader.aPosition, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shader.aPosition);
+        gl.vertexAttribPointer(gameObj.shader.aPosition, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(gameObj.shader.aPosition);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-        gl.vertexAttribPointer(shader.aNormal, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shader.aNormal);
-
+        if (gameObj.shader.aNormal) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+          gl.vertexAttribPointer(gameObj.shader.aNormal, 3, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(gameObj.shader.aNormal);
+        }
+        
         gl.bindBuffer(gl.ARRAY_BUFFER, textureUVBuffer);
-        gl.vertexAttribPointer(shader.aTextureUV, 2, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shader.aTextureUV);
+        gl.vertexAttribPointer(gameObj.shader.aTextureUV, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(gameObj.shader.aTextureUV);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indiciesBuffer);
 
@@ -291,31 +344,27 @@ class Game {
           canvas.width / canvas.height, camera.zNear, camera.zFar);
 
         const modelMatrix = mat4.create();
-        mat4.translate(modelMatrix, modelMatrix, x.position);
-        if (x.rotation) {
-          mat4.rotate(modelMatrix, modelMatrix, glMatrix.toRadian(x.rotation[0]), [1, 0, 0]);
-          mat4.rotate(modelMatrix, modelMatrix, glMatrix.toRadian(x.rotation[1]), [0, 1, 0]);
-          mat4.rotate(modelMatrix, modelMatrix, glMatrix.toRadian(x.rotation[2]), [0, 0, 1]);
+        mat4.translate(modelMatrix, modelMatrix, gameObj.position);
+        if (gameObj.rotation) {
+          mat4.rotate(modelMatrix, modelMatrix, glMatrix.toRadian(gameObj.rotation[0]), [1, 0, 0]);
+          mat4.rotate(modelMatrix, modelMatrix, glMatrix.toRadian(gameObj.rotation[1]), [0, 1, 0]);
+          mat4.rotate(modelMatrix, modelMatrix, glMatrix.toRadian(gameObj.rotation[2]), [0, 0, 1]);
         }
-        if (x.scale) {
-          mat4.scale(modelMatrix, modelMatrix, x.scale);
+        if (gameObj.scale) {
+          mat4.scale(modelMatrix, modelMatrix, gameObj.scale);
         } 
 
-        const normalMatrix = mat4.create();
-        mat4.invert(normalMatrix, modelMatrix);
-        mat4.transpose(normalMatrix, normalMatrix);
+        gl.uniformMatrix4fv(gameObj.shader.uProjectionMatrix, false, projectionMatrix);
+        gl.uniformMatrix4fv(gameObj.shader.uViewMatrix, false, viewMatrix);
+        gl.uniformMatrix4fv(gameObj.shader.uModelMatrix, false, modelMatrix);
 
-        gl.uniformMatrix4fv(shader.uProjectionMatrix, false, projectionMatrix);
-        gl.uniformMatrix4fv(shader.uViewMatrix, false, viewMatrix);
-        gl.uniformMatrix4fv(shader.uModelMatrix, false, modelMatrix);
-        gl.uniformMatrix4fv(shader.uNormalMatrix, false, normalMatrix);
-
-        //gl.uniform3fv(uViewPosition, false, camera.position);
+        //if (gameObj.shader.uViewPosition)
+        //  gl.uniform3fv(gameObj.shader.uViewPosition, false, camera.position);
 
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, x.texture.texture);
-        gl.uniform1i(shader.uSampler, 0);
-        gl.uniform2fv(shader.uTextureScale, x.texture.scale);
+        gl.bindTexture(gl.TEXTURE_2D, gameObj.texture.texture);
+        gl.uniform1i(gameObj.shader.uSampler, 0);
+        gl.uniform2fv(gameObj.shader.uTextureScale, gameObj.texture.scale);
 
         gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
       });

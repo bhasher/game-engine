@@ -7,7 +7,6 @@ in vec2 aTextureUV;
 uniform mat4 uProjectionMatrix; 
 uniform mat4 uViewMatrix; 
 uniform mat4 uModelMatrix;
-uniform mat4 uNormalMatrix;
 
 out highp vec3 vNormal;
 out highp vec2 vTextureUV;
@@ -18,7 +17,7 @@ void main(void) {
   vFragPosition = vec3(fragPosition);
 
   vTextureUV = aTextureUV;
-  vNormal = aNormal;
+  vNormal = mat3(transpose(inverse(uModelMatrix))) * aNormal;
 
-  gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1);
+  gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
 }

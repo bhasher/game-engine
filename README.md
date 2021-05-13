@@ -26,20 +26,16 @@ This game engine is priarily made of two parts.
 
 2. electron
 
-Currently I'm being kind of messy with it and not supporting a browser based build. The front-end stuff contains code that runs directly in the node environment.. rather than using webpacks to build
-a website to send over http. I think you're supposed to do that anyway. I guess I'll find out later.
+Electron has proven to improve the framerate greatly, especially with the ability to run a node environment on the desktop instead of strictly running on top of chrome.
 
 ## Plans
 
 * Keep improving engine features (Lighting, models, textures, collision, etc..)
 
-* Logically seperate code, with as little abstraction as possible
+* Logically seperate code
 
 * Keep this readme up to date and try to document stuff
 
 * Custom file types and data structures that stay true to OpenGL's low level logic
 
 * Implement tools such as level editors
-
-
-Idk have fun.

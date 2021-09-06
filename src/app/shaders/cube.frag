@@ -16,20 +16,23 @@ out vec4 fragmentColor;
 void main(void) {
   vec4 objectColor = texture(uSampler, vTextureUV * uTextureScale);
 
-  float ambientStrength = 0.1;
+  float ambientStrength = 0.2;
   vec3 lightColor = vec3(1, 1, 1) * 0.6;
   vec3 ambientColor = ambientStrength * lightColor;
 
+  vec3 normalizedNormal = normalize(vNormal);
+
+  float diffuseStrength = 1.0;
   vec3 lightDirection = normalize(uLightPosition - vFragPosition);
-  vec3 diffuseColor = max(dot(normalize(vNormal), lightDirection), 0.0) * lightColor;
+  vec3 diffuseColor = max(dot(normalizedNormal, lightDirection), 0.0) * lightColor * diffuseStrength;
 
-  float specularStrength = 0.5;
+  float specularStrength = 0.6;
   vec3 viewDirection = normalize(uViewPosition - vFragPosition);
-  vec3 reflectDirection = reflect(-lightDirection, vNormal);
+  vec3 reflectDirection = reflect(-lightDirection, normalizedNormal);
 
-  float specularValue = pow(max(dot(viewDirection, reflectDirection), 0.0), 2.0);
+  float specularValue = pow(max(dot(viewDirection, reflectDirection), 0.0), 32.0);
   vec3 specularColor = specularStrength * specularValue * lightColor;
 
   vec3 lightingColor = ambientColor + diffuseColor + specularColor;
-  fragmentColor = vec4(objectColor.rbg * lightingColor, objectColor.a);
+  fragmentColor = vec4(objectColor.rgb * lightingColor, 1.0);
 }

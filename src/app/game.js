@@ -20,6 +20,7 @@ class Game {
     // SHADERS
 
     const shaders = {
+      /** @type {Shader} */
       cube: {
         attribs: ['aPosition', 'aNormal', 'aTextureUV'],
         uniforms: [
@@ -36,6 +37,7 @@ class Game {
           type: gl.FRAGMENT_SHADER,
         }]
       },
+      /** @type {Shader} */
       basic: {
         attribs: ['aPosition', 'aTextureUV'],
         uniforms: [
@@ -94,32 +96,40 @@ class Game {
       })
     }); 
 
-    console.log(shaders);
-
     // --------------------------------------------------------------------------------------------
     // BUFFERS
 
-    const cube = require('./cube.js');
+    const buffers = {
+      cube: {},
+      Barrel: {}
+    };
 
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube.position), gl.STATIC_DRAW);
+    ['cube', 'Barrel'].forEach(x => {
+      var mesh = JSON.parse(fs.readFileSync('./src/assets/mesh/' + x + '.json'));
 
-    const normalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube.normal), gl.STATIC_DRAW);
+      buffers[x].positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers[x].positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.position), gl.STATIC_DRAW);
 
-    const textureUVBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, textureUVBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube.uv), gl.STATIC_DRAW);
+      buffers[x].normalBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers[x].normalBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.normal), gl.STATIC_DRAW);
 
-    const indiciesBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indiciesBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cube.index), gl.STATIC_DRAW);
+      buffers[x].textureUVBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers[x].textureUVBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.uv), gl.STATIC_DRAW);
+
+      buffers[x].indiciesBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers[x].indiciesBuffer);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.index), gl.STATIC_DRAW);
+
+      buffers[x].indexLength = mesh.index.length;
+    });
 
     gl.clearColor(0.1, 0.0, 0.8, 1.0);
     gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
     gl.depthFunc(gl.LEQUAL);
 
 
@@ -128,17 +138,22 @@ class Game {
 
     const textures = {
       floor: {
-        file: '../assets/gravel.png',
+        file: '../assets/png/gravel.png',
         texture: null,
         scale: vec2.fromValues(1,1)
       },
       wall: {
-        file: '../assets/rocks.png',
+        file: '../assets/png/rocks.png',
         texture: null,
         scale: vec2.fromValues(1,1)
       },
       sun: {
-        file: '../assets/the-sun.png',
+        file: '../assets/png/the-sun.png',
+        texture: null,
+        scale: vec2.fromValues(1,1)
+      },
+      barrel: {
+        file: '../assets/png/Barrel_Material.png',
         texture: null,
         scale: vec2.fromValues(1,1)
       }
@@ -150,11 +165,13 @@ class Game {
       x.texture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, x.texture );
 
+      /*
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);     
+      */
+
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, 
                     gl.UNSIGNED_BYTE, new Uint8Array([255, 0, 255, 255]));
 
@@ -163,7 +180,7 @@ class Game {
       image.onload = function () {
         x.texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, x.texture);
-
+        //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
         gl.generateMipmap(gl.TEXTURE_2D);
         
@@ -200,7 +217,8 @@ class Game {
           position: [x, -3, z],
           texture: textures.floor,
           shader: shaders.cube,
-          scale: [1, 1, 1]
+          scale: [1, 1, 1],
+          buffers: buffers.cube
         });
       }
     };
@@ -209,12 +227,14 @@ class Game {
       gameObjects.push({
         position: [-15, -1, z],
         texture: textures.wall,
-        shader: shaders.cube
+        shader: shaders.cube,
+        buffers: buffers.cube
       });
       gameObjects.push({
         position: [15, -1, z],
         texture: textures.wall,
-        shader: shaders.cube
+        shader: shaders.cube,
+        buffers: buffers.cube
       });
     };
 
@@ -223,26 +243,38 @@ class Game {
         gameObjects.push({
           position: [ pair[0], y, pair[1] ],
           texture: textures.wall,
-          shader: shaders.cube
+          shader: shaders.cube,
+          buffers: buffers.cube
         });
       });
     }
 
 
-  /* The sun! */
+    /* The sun! */
 
     const lightPosition = [-25, 20, 5];
 
     gameObjects.push({
       position: lightPosition,
       texture: textures.sun,
-      scale: [-5, -5, -5],
+      scale: [5, 5, 5],
       rotation: [0, 0, 90],
-      shader: shaders.basic
+      shader: shaders.basic,
+      buffers: buffers.cube
     });
 
+    /* Barrel */
 
-    
+    [[-5,-5], [5, 5], [10, -5]].forEach(x => {
+      gameObjects.push({
+        position: [x[0], -2, x[1]],
+        texture: textures.barrel,
+        scale: [0.5, 0.5, 0.5],
+        shader: shaders.cube,
+        buffers: buffers.Barrel
+      });
+    });
+
     // --------------------------------------------------------------------------------------------
     // Loop
 
@@ -323,21 +355,21 @@ class Game {
 
         gl.useProgram(gameObj.shader.program);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gameObj.buffers.positionBuffer);
         gl.vertexAttribPointer(gameObj.shader.aPosition, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(gameObj.shader.aPosition);
 
         if (gameObj.shader.aNormal) {
-          gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+          gl.bindBuffer(gl.ARRAY_BUFFER, gameObj.buffers.normalBuffer);
           gl.vertexAttribPointer(gameObj.shader.aNormal, 3, gl.FLOAT, false, 0, 0);
           gl.enableVertexAttribArray(gameObj.shader.aNormal);
         }
         
-        gl.bindBuffer(gl.ARRAY_BUFFER, textureUVBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gameObj.buffers.textureUVBuffer);
         gl.vertexAttribPointer(gameObj.shader.aTextureUV, 2, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(gameObj.shader.aTextureUV);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indiciesBuffer);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gameObj.buffers.indiciesBuffer);
 
         const viewMatrix = mat4.create();
         mat4.lookAt(viewMatrix, camera.position, camera.target, [0,1,0]);
@@ -372,7 +404,7 @@ class Game {
         gl.uniform1i(gameObj.shader.uSampler, 0);
         gl.uniform2fv(gameObj.shader.uTextureScale, gameObj.texture.scale);
 
-        gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, gameObj.buffers.indexLength, gl.UNSIGNED_SHORT, 0);
       });
 
       requestAnimationFrame(loop);

@@ -4,6 +4,7 @@
   "description": "",
   "main": "src/main.js",
   "scripts": {
+    "build": "node ./src/mesh-importer/mesh-importer.js",
     "start": "electron ."
   },
   "author": "Brandon Hasher",

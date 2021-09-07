@@ -36,7 +36,7 @@ app.whenReady().then(()=> {
   if (!test)
     window.webContents.openDevTools();
 
-  window.loadFile('src/app/index.html')
+  window.loadFile('./dist/index.html');
 
   globalShortcut.register('Esc', () => {
     app.quit();

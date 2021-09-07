@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": "dist",
+    //"preserveConstEnums": true,
+    "allowJs": true,
+    "target": "ES5",
+    "module": "commonjs",
+    //"moduleResolution": "node",
+    "sourceMap": false,
+    //"declaration": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.spec.ts", "content"]
+}

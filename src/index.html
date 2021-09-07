@@ -8,7 +8,12 @@
   <body>
     <canvas id='glCanvas' width="800" height="600"></canvas>
     <script>
-      var game = require('./game');
+      const game = require('./app/game');
+      console.log(__dirname);
+      
+      var canvas = document.querySelector("#glCanvas");;
+      var gl = canvas.getContext("webgl2");;
+        
       document.onload = game.start();
     </script>
   </body>

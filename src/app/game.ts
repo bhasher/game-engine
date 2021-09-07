@@ -1,44 +1,45 @@
+import { ShaderRegistry, Shader, ShaderData } from './types/shader';
+import { Texture, TextureRegistry } from './types/texture';
+import { BuffersRegistry, Buffers } from './types/buffers';
+import { GameObject } from './types/gameObject';
 const { glMatrix, mat4, vec3, vec2 } = require('gl-matrix');
 const input = require('./input');
 const fs = require('fs');
 
-class Game {
+export class Game {
+
   start() {
 
-    /** @type {HTMLCanvasElement} */
-    const canvas = document.querySelector("#glCanvas");
-
-    const gl = canvas.getContext("webgl2");
+    console.log('started');
 
     if (gl === null) {
       alert('GL broken');
       return;
     }
 
-
     // --------------------------------------------------------------------------------------------
     // SHADERS
 
-    const shaders = {
-      /** @type {Shader} */
-      cube: {
+    const shaderRegistry: ShaderRegistry = new ShaderRegistry([
+      new Shader({
+        name: 'cube',
         attribs: ['aPosition', 'aNormal', 'aTextureUV'],
         uniforms: [
           'uProjectionMatrix', 'uViewMatrix', 'uModelMatrix',
           'uSampler', 'uTextureScale', 'uLightPosition', 'uViewPosition'
         ],
-        data: [{
+        data: [new ShaderData({
           file: 'cube.vert',
           src: fs.readFileSync(`${__dirname}/shaders/cube.vert`),
           type: gl.VERTEX_SHADER
-        }, {
+        }), new ShaderData({
           file: 'cube.frag',
           src: fs.readFileSync(`${__dirname}/shaders/cube.frag`),
           type: gl.FRAGMENT_SHADER,
-        }]
-      },
-      /** @type {Shader} */
-      basic: {
+        })]
+      }),
+      new Shader({
+        name: 'basic',
         attribs: ['aPosition', 'aTextureUV'],
         uniforms: [
           'uProjectionMatrix', 'uViewMatrix', 'uModelMatrix', 
@@ -53,78 +54,16 @@ class Game {
           src: fs.readFileSync(`${__dirname}/shaders/basic.frag`),
           type: gl.FRAGMENT_SHADER,
         }]
-      }
-    };
-
-    [shaders.cube, shaders.basic].forEach(shader=>{
-      shader.program = gl.createProgram();
-
-      shader.data.forEach(x => {
-        x.shader = gl.createShader(x.type);
-        gl.shaderSource(x.shader, x.src);
-        gl.compileShader(x.shader);
-        gl.attachShader(shader.program, x.shader);
-      });
-  
-      gl.linkProgram(shader.program);
-  
-      if (!gl.getProgramParameter(shader.program, gl.LINK_STATUS)) {
-        shader.data.forEach(x => {
-          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            console.error(`Shader Compile Error: ${x.file}: ${gl.getShaderInfoLog(shader)}`);
-            gl.deleteShader(shader);
-          }
-        });
-        console.error(gl.getProgramInfoLog(shader.program));
-        return null;
-      }
-  
-      const allAttribs = ['aPosition', 'aNormal', 'aTextureUV'];
-      const allUniforms = [
-        'uProjectionMatrix', 'uViewMatrix', 'uModelMatrix',
-        'uSampler', 'uTextureScale', 'uViewPosition', 'uLightPosition'
-      ]
-
-      allAttribs.forEach(attrib => {
-        if (shader.attribs.includes(attrib))
-          shader[attrib] = gl.getAttribLocation(shader.program, attrib);
-      });
-
-      allUniforms.forEach(uniform => {
-        if (shader.uniforms.includes(uniform))
-          shader[uniform] = gl.getUniformLocation(shader.program, uniform);
       })
-    }); 
+    ]);
 
     // --------------------------------------------------------------------------------------------
     // BUFFERS
 
-    const buffers = {
-      cube: {},
-      Barrel: {}
-    };
-
-    ['cube', 'Barrel'].forEach(x => {
-      var mesh = JSON.parse(fs.readFileSync('./src/assets/mesh/' + x + '.json'));
-
-      buffers[x].positionBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers[x].positionBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.position), gl.STATIC_DRAW);
-
-      buffers[x].normalBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers[x].normalBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.normal), gl.STATIC_DRAW);
-
-      buffers[x].textureUVBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers[x].textureUVBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.uv), gl.STATIC_DRAW);
-
-      buffers[x].indiciesBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers[x].indiciesBuffer);
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.index), gl.STATIC_DRAW);
-
-      buffers[x].indexLength = mesh.index.length;
-    });
+    const bufferRegistry = new BuffersRegistry([
+      new Buffers('cube'),
+      new Buffers('barrel')
+    ]);
 
     gl.clearColor(0.1, 0.0, 0.8, 1.0);
     gl.clearDepth(1);
@@ -136,63 +75,12 @@ class Game {
     // --------------------------------------------------------------------------------------------
     // Textures
 
-    const textures = {
-      floor: {
-        file: '../assets/png/gravel.png',
-        texture: null,
-        scale: vec2.fromValues(1,1)
-      },
-      wall: {
-        file: '../assets/png/rocks.png',
-        texture: null,
-        scale: vec2.fromValues(1,1)
-      },
-      sun: {
-        file: '../assets/png/the-sun.png',
-        texture: null,
-        scale: vec2.fromValues(1,1)
-      },
-      barrel: {
-        file: '../assets/png/Barrel_Material.png',
-        texture: null,
-        scale: vec2.fromValues(1,1)
-      }
-    }
-
-    Object.keys(textures).forEach(i => {
-      const x = textures[i];
-      
-      x.texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, x.texture );
-
-      /*
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);     
-      */
-
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, 
-                    gl.UNSIGNED_BYTE, new Uint8Array([255, 0, 255, 255]));
-
-
-      const image = new Image();
-      image.onload = function () {
-        x.texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, x.texture);
-        //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      }
-      image.src = x.file;
-    });
-
+    const textureRegistry = new TextureRegistry([
+      new Texture('gravel'),
+      new Texture('rocks'),
+      new Texture('the-sun'),
+      new Texture('barrel')
+    ]);
 
     // -------------------------------------------------------------------------------------------
     // Object Models
@@ -207,45 +95,44 @@ class Game {
       zFar: 100
     };
 
-
     /* CUBES */
 
-    var gameObjects = [];
+    var gameObjects: Array<GameObject> = [];
     for (var x = -16; x <= 16; x+=2) {
       for (var z = -16; z <= 16; z+=2) {
-        gameObjects.push({
+        gameObjects.push(new GameObject({
           position: [x, -3, z],
-          texture: textures.floor,
-          shader: shaders.cube,
+          texture: textureRegistry.getTextureByName('gravel'),
+          shader: shaderRegistry.getShaderByName('cube'),
           scale: [1, 1, 1],
-          buffers: buffers.cube
-        });
+          buffers: bufferRegistry.getByName('cube')
+        }));
       }
     };
 
     for (var z = -15; z <= 15; z+=2) {
-      gameObjects.push({
+      gameObjects.push(new GameObject({
         position: [-15, -1, z],
-        texture: textures.wall,
-        shader: shaders.cube,
-        buffers: buffers.cube
-      });
-      gameObjects.push({
+        texture: textureRegistry.getTextureByName('rocks'),
+        shader: shaderRegistry.getShaderByName('cube'),
+        buffers: bufferRegistry.getByName('cube')
+      }));
+      gameObjects.push(new GameObject({
         position: [15, -1, z],
-        texture: textures.wall,
-        shader: shaders.cube,
-        buffers: buffers.cube
-      });
+        texture: textureRegistry.getTextureByName('rocks'),
+        shader: shaderRegistry.getShaderByName('cube'),
+        buffers: bufferRegistry.getByName('cube')
+      }));
     };
 
     for (var y = -1; y <= 3; y+=2) {
       [[3,2],[8,7],[2,-5]].forEach(pair=>{
-        gameObjects.push({
+        gameObjects.push(new GameObject({
           position: [ pair[0], y, pair[1] ],
-          texture: textures.wall,
-          shader: shaders.cube,
-          buffers: buffers.cube
-        });
+          texture: textureRegistry.getTextureByName('rocks'),
+          shader: shaderRegistry.getShaderByName('cube'),
+          buffers: bufferRegistry.getByName('cube')
+        }));
       });
     }
 
@@ -254,25 +141,25 @@ class Game {
 
     const lightPosition = [-25, 20, 5];
 
-    gameObjects.push({
+    gameObjects.push(new GameObject({
       position: lightPosition,
-      texture: textures.sun,
+      texture: textureRegistry.getTextureByName('the-sun'),
       scale: [5, 5, 5],
       rotation: [0, 0, 90],
-      shader: shaders.basic,
-      buffers: buffers.cube
-    });
+      shader: shaderRegistry.getShaderByName('basic'),
+      buffers: bufferRegistry.getByName('cube')
+    }));
 
     /* Barrel */
 
     [[-5,-5], [5, 5], [10, -5]].forEach(x => {
-      gameObjects.push({
+      gameObjects.push(new GameObject({
         position: [x[0], -2, x[1]],
-        texture: textures.barrel,
+        texture: textureRegistry.getTextureByName('barrel'),
         scale: [0.5, 0.5, 0.5],
-        shader: shaders.cube,
-        buffers: buffers.Barrel
-      });
+        shader: shaderRegistry.getShaderByName('cube'),
+        buffers: bufferRegistry.getByName('barrel')
+      }));
     });
 
     // --------------------------------------------------------------------------------------------

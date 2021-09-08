@@ -139,7 +139,7 @@ export class Game {
 
     /* The sun! */
 
-    const lightPosition = [-25, 20, 5];
+    const lightPosition = [0, 20, 0];
 
     gameObjects.push(new GameObject({
       position: lightPosition,
@@ -166,15 +166,23 @@ export class Game {
     // Loop
 
     var then = 0;
-    var delta = {
+    const delta = {
       ms: 0,
       s: 0
+    };
+
+    const totalTime = {
+      s: 0,
+      ms: 0
     };
 
     const loop = now => {
       delta.ms = now - then;
       delta.s = delta.ms / 1000;
       then = now;
+
+      totalTime.ms += delta.ms;
+      totalTime.s += delta.s;
 
       if (canvas.width != canvas.clientWidth || canvas.clientHeight != canvas.clientHeight) {
         canvas.width = canvas.clientWidth;
@@ -183,6 +191,14 @@ export class Game {
         gl.viewport(0, 0, canvas.width, canvas.height);
       }
 
+      // ------------------------------------------------------------------------------------------
+      // Animate Light
+
+      const lightOffset = 15;
+      lightPosition[0] = Math.sin(totalTime.s) * lightOffset;
+      lightPosition[2] = Math.cos(totalTime.s) * lightOffset;
+      console.log(lightPosition[0]);
+      
       // ------------------------------------------------------------------------------------------
       // Input & Movement
 
@@ -284,7 +300,7 @@ export class Game {
           gl.uniform3fv(gameObj.shader.uViewPosition, camera.position);
 
         if (gameObj.shader.uLightPosition)
-          gl.uniform3fv(gameObj.shader.ulightPosition, lightPosition);
+          gl.uniform3fv(gameObj.shader.uLightPosition, lightPosition);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, gameObj.texture.texture);

@@ -6,7 +6,7 @@
   "typings": "src/app/global.d.ts",
   "scripts": {
     "build-mesh": "node ./src/mesh-importer/mesh-importer.js",
-    "build": "tsc && gulp",
+    "build": "tsc && gulp && npm start",
     "copy-files": "copyfiles *.html dist/ && copyfiles *.css dist/ && copyfiles *.frag dist/ && copyfiles *.vert dist/",
     "start": "electron ."
   },

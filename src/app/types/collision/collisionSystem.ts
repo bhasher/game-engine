@@ -1,6 +1,7 @@
 import { GameObject } from '../gameObject';
 import { CollisionInfo, ColliderType, AABBCollider, CircleCollider } from './collider';
 import { GameState } from '../../gameState';
+import { Game } from '../../game';
 const { vec3 } = require('gl-matrix');
 
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
@@ -18,28 +19,23 @@ export class CollisionSystem {
   }
 
   static ResolveCollision(collisionInfo: CollisionInfo) {
-    if (GameState.isOneSecondTickFrame)
-      vm.log( `Penetration: ${collisionInfo.penetration} I AM COLLIDING` );
+    if (collisionInfo.penetration <= 0) {
+      vm.log(`Penetration: ${collisionInfo.penetration}`);
+      return;
+    }
 
     var gameObject: GameObject;
     if (collisionInfo.gameObjectA.ridgidBody == null) {
       gameObject = collisionInfo.gameObjectB;
       gameObject.ridgidBody.velocity = [0, 0, 0];
       gameObject.position = gameObject.position.map((x, i) => {
-        return x - collisionInfo.normal[i] * collisionInfo.penetration;
+        return x - collisionInfo.normal[i] * collisionInfo.penetration * gameObject.ridgidBody.mass;
       });
     } else {
       gameObject = collisionInfo.gameObjectA;
       gameObject.ridgidBody.velocity = gameObject.ridgidBody.velocity.map((x, i) => {
-       return collisionInfo.normal[i] * collisionInfo.penetration * gameObject.ridgidBody.mass;
+       return x + collisionInfo.normal[i] * collisionInfo.penetration * gameObject.ridgidBody.mass;
       });
-    }
-
-    gameObject.ridgidBody.forceAccum = [0, 0, 0];
-
-    if (GameState.isOneSecondTickFrame) {
-      vm.log( `Velocity: ${gameObject.ridgidBody.velocity} I AM COLLIDING` );
-      vm.log( `Acceleration: ${gameObject.ridgidBody.acceleration}` );
     }
   }
 
@@ -85,7 +81,7 @@ export class CollisionSystem {
 
     var distance = vec3.length(localPoint);
 
-    if (distance < volB.radius) {
+    if (distance <= volB.radius) {
       var normal = [0, 0, 0];
       vec3.normalize(normal, localPoint);
       var penetration = volB.radius - distance;

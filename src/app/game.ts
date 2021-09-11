@@ -156,7 +156,7 @@ export class Game {
       });
     }
 
-    const fallingBlock = new GameObject({
+    const player = new GameObject({
       position: [0, 30, 0],
       texture: textureRegistry.getTextureByName('rocks'),
       shader: shaderRegistry.getShaderByName('cube'),
@@ -169,11 +169,11 @@ export class Game {
         radius: 0.5
       })
     });
-    gameObjects.push(fallingBlock);
+    gameObjects.push(player);
 
     ForceRegistry.add(new ForceRegistration({
       ridgidBody: gameObjects[gameObjects.length - 1].ridgidBody,
-      forceGenerator: new GravityGenerator(9)
+      forceGenerator: new GravityGenerator(9.807)
     }));
 
 
@@ -299,7 +299,8 @@ export class Game {
         const moveMultiplier = 7 * delta.s;
         vec3.multiply(moveDirection, moveDirection, [moveMultiplier, 0, moveMultiplier]);
         vec3.rotateY(moveDirection, moveDirection, [0, 0, 0], camera.yaw);
-        vec3.add(camera.position, camera.position, moveDirection);
+        vec3.add(player.position, player.position, moveDirection);
+        camera.position = [player.position[0], player.position[1] + 1.27, player.position[2]];
 
         const spin = vec3.create();
         vec3.rotateY(spin, [0, 0, -1], [0, 0, 0], camera.yaw);
@@ -307,7 +308,8 @@ export class Game {
         camera.target[1] = camera.position[1] + camera.pitch;
 
         if (input.getBindingByName('jump').pressed) {
-          fallingBlock.ridgidBody.addForce([0,150,0]);
+          player.ridgidBody.velocity[1] += 6;
+          vm.log(`Jumped! Time: ${delta.s}`);
         }
         input.flush();
       }
@@ -316,11 +318,6 @@ export class Game {
       
       // ------------------------------------------------------------------------------------------
       // Physics
-
-      if (GameState.isOneSecondTickFrame) {
-        vm.log(`\r\n\r\n`)
-        vm.log(`Position: ${fallingBlock.position[1]}`)
-      }
 
       ForceRegistry.update(delta.s);
       CollisionSystem.TestCollisions(gameObjects);
@@ -344,11 +341,11 @@ export class Game {
 
         if (gameObj.ridgidBody != null) {
           gameObjects.filter(x => x.ridgidBody != null).forEach(x => x.ridgidBody.integrate(delta.s));
-          if (GameState.isOneSecondTickFrame) {
-            vm.log(`Velocity: ${fallingBlock.ridgidBody.velocity}`);
-            vm.log(`Position: ${fallingBlock.position[1]}`);
-          }
+          if (GameState.isOneSecondTickFrame)
+            vm.log(`Position: ${gameObj.position[1]}`)
         }
+
+        
         
 
         gl.useProgram(gameObj.shader.program);

@@ -29,12 +29,6 @@ export class RidgidBody {
 
     this.parent.position = this.parent.position.map((x, i) => x + this.velocity[i] * time);
 
-    if (GameState.isOneSecondTickFrame) {
-      vm.log(`lastFrameAcceleration: ${this.lastFrameAcceleration.toString()}`);
-      vm.log(`Velocity: ${this.velocity.toString()}`);
-      vm.log( `Force Accum: ${ this.forceAccum.toString() }` )
-    }
-
     this.forceAccum = [0, 0, 0];
   }
 

@@ -18,22 +18,31 @@
         color: white;
         font-weight: bold;
         top: 0;
-        right: 0;
-        left: auto;
+        left: 0;
         pointer-events: none;
       }
       #sidebar {
         flex: 1 0 1;
+        height: 100%;
+        width: 30%;
         align-self: flex-end;
         overflow-y: scroll;
+        display: block;
       }
       #handle {
         align-self: center;
         width: 20px;
+        height: 100%;
         flex: 0 0 20px;
         height: calc("100% - 50px");
         background: #ddd;
         cursor: ew-resize;
+      }
+      #code-dump {
+        overflow-y: scroll;
+        margin: 5px;
+        height: 50%;
+        border: solid 1px black;
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
@@ -43,7 +52,9 @@
     <canvas id='glCanvas' width="800" height="600"></canvas>
     <div id='handle'></div>
     <div id='sidebar'>
-      <pre>{{ shownJson }}</pre>
+      <h1>Tools n stuff</h1>
+      <h3>Code Dump</h3>
+      <pre id='code-dump'>{{ shownJson }}</pre>
     </div>
     <script>
       const game = require('./app/game');
@@ -84,7 +95,7 @@
             this.shownJson += `\r\n ${this.lineNum} | ${value}`;
             this.lineNum++;
             this.$nextTick(function() {
-              const sidebar = document.getElementById('sidebar');   
+              const sidebar = document.getElementById('code-dump');   
               sidebar.scrollTop = sidebar.scrollHeight;
             });
           }

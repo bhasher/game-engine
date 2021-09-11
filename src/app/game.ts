@@ -139,12 +139,12 @@ export class Game {
 
     /* The sun! */
 
-    const lightPosition = [0, 20, 0];
+    const lightPosition = [0, 5, 0];
 
     gameObjects.push(new GameObject({
       position: lightPosition,
       texture: textureRegistry.getTextureByName('the-sun'),
-      scale: [5, 5, 5],
+      scale: [1, 1, 1],
       rotation: [0, 0, 90],
       shader: shaderRegistry.getShaderByName('basic'),
       buffers: bufferRegistry.getByName('cube')
@@ -194,7 +194,7 @@ export class Game {
       // ------------------------------------------------------------------------------------------
       // Animate Light
 
-      const lightOffset = 15;
+      const lightOffset = 12;
       lightPosition[0] = Math.sin(totalTime.s) * lightOffset;
       lightPosition[2] = Math.cos(totalTime.s) * lightOffset;
       console.log(lightPosition[0]);

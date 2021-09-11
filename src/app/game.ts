@@ -2,9 +2,17 @@ import { ShaderRegistry, Shader, ShaderData } from './types/shader';
 import { Texture, TextureRegistry } from './types/texture';
 import { BuffersRegistry, Buffers } from './types/buffers';
 import { GameObject } from './types/gameObject';
+import { RidgidBody } from './types/physics/ridgidBody';
+import { ForceRegistration, ForceRegistry } from './types/physics/forceRegistry';
+import { ForceGenerator } from './types/physics/forceGenerator';
+import { GravityGenerator } from './types/physics/gravityGenerator';
+import { CollisionSystem } from './types/collision/collisionSystem';
+import { Collider, CircleCollider, AABBCollider } from './types/collision/collider';
 const { glMatrix, mat4, vec3, vec2 } = require('gl-matrix');
 const input = require('./input');
 const fs = require('fs');
+import { ipcRenderer } from 'electron';
+import { GameState } from './gameState';
 
 export class Game {
 
@@ -86,7 +94,7 @@ export class Game {
     // Object Models
 
     const camera = {
-      position: vec3.create(),
+      position: [0, 1.77, 0],
       target: vec3.create(),
       yaw: 0,
       pitch: 0,
@@ -98,43 +106,75 @@ export class Game {
     /* CUBES */
 
     var gameObjects: Array<GameObject> = [];
-    for (var x = -16; x <= 16; x+=2) {
-      for (var z = -16; z <= 16; z+=2) {
+    for (var x = -16; x <= 16; x++) {
+      for (var z = -16; z <= 16; z++) {
         gameObjects.push(new GameObject({
-          position: [x, -3, z],
+          position: [x, 0, z],
           texture: textureRegistry.getTextureByName('gravel'),
           shader: shaderRegistry.getShaderByName('cube'),
           scale: [1, 1, 1],
-          buffers: bufferRegistry.getByName('cube')
+          buffers: bufferRegistry.getByName('cube'),
+          collider: new AABBCollider({
+            halfSize: 0.5
+          })
         }));
       }
     };
 
-    for (var z = -15; z <= 15; z+=2) {
+    for (var z = -15; z <= 15; z++) {
       gameObjects.push(new GameObject({
-        position: [-15, -1, z],
+        position: [-15, 1, z],
         texture: textureRegistry.getTextureByName('rocks'),
         shader: shaderRegistry.getShaderByName('cube'),
-        buffers: bufferRegistry.getByName('cube')
+        buffers: bufferRegistry.getByName('cube'),
+        collider: new AABBCollider({
+          halfSize: 0.5
+        })
       }));
       gameObjects.push(new GameObject({
-        position: [15, -1, z],
+        position: [15, 1, z],
         texture: textureRegistry.getTextureByName('rocks'),
         shader: shaderRegistry.getShaderByName('cube'),
-        buffers: bufferRegistry.getByName('cube')
+        buffers: bufferRegistry.getByName('cube'),
+        collider: new AABBCollider({
+          halfSize: 0.5
+        })
       }));
     };
 
-    for (var y = -1; y <= 3; y+=2) {
+    for (var y = 1; y <= 4; y++) {
       [[3,2],[8,7],[2,-5]].forEach(pair=>{
         gameObjects.push(new GameObject({
           position: [ pair[0], y, pair[1] ],
           texture: textureRegistry.getTextureByName('rocks'),
           shader: shaderRegistry.getShaderByName('cube'),
-          buffers: bufferRegistry.getByName('cube')
+          buffers: bufferRegistry.getByName('cube'),
+          collider: new AABBCollider({
+            halfSize: 0.5
+          })
         }));
       });
     }
+
+    const fallingBlock = new GameObject({
+      position: [0, 30, 0],
+      texture: textureRegistry.getTextureByName('rocks'),
+      shader: shaderRegistry.getShaderByName('cube'),
+      buffers: bufferRegistry.getByName('cube'),
+      ridgidBody: new RidgidBody({
+        mass: 2
+      }),
+      collider: new CircleCollider({
+        postion: [0, 0, 0],
+        radius: 0.5
+      })
+    });
+    gameObjects.push(fallingBlock);
+
+    ForceRegistry.add(new ForceRegistration({
+      ridgidBody: gameObjects[gameObjects.length - 1].ridgidBody,
+      forceGenerator: new GravityGenerator(9)
+    }));
 
 
     /* The sun! */
@@ -154,7 +194,7 @@ export class Game {
 
     [[-5,-5], [5, 5], [10, -5]].forEach(x => {
       gameObjects.push(new GameObject({
-        position: [x[0], -2, x[1]],
+        position: [x[0], .5, x[1]],
         texture: textureRegistry.getTextureByName('barrel'),
         scale: [0.5, 0.5, 0.5],
         shader: shaderRegistry.getShaderByName('cube'),
@@ -163,7 +203,17 @@ export class Game {
     });
 
     // --------------------------------------------------------------------------------------------
+    // Electron IPC
+
+    ipcRenderer.on('pause', (event, store) => {
+      GameState.paused = !GameState.paused;
+      if (!GameState.paused)
+        requestAnimationFrame(loop);
+    });
+
+    // --------------------------------------------------------------------------------------------
     // Loop
+
 
     var then = 0;
     const delta = {
@@ -176,13 +226,38 @@ export class Game {
       ms: 0
     };
 
+    const fps = document.querySelector('#fps');
+    var lastFPSupdate = 0;
+    var fpsList = [];
+
     const loop = now => {
-      delta.ms = now - then;
+      if (GameState.paused) {
+        GameState.pausedTime = now;
+        return;
+      }
+
+      if (GameState.pausedTime) {
+        delta.ms = GameState.pausedTime - then;
+        GameState.pausedTime = null;
+      } else {
+        delta.ms = now - then;
+      }
       delta.s = delta.ms / 1000;
       then = now;
 
       totalTime.ms += delta.ms;
       totalTime.s += delta.s;
+
+      fpsList.push(delta.s)
+      if (totalTime.s - lastFPSupdate >= 1) {
+        GameState.isOneSecondTickFrame = true;
+        var avg_fps = Math.round(avg_fps = 1 / (fpsList.reduce((a, b) => a + b) / fpsList.length));
+        fps.innerHTML = `${avg_fps}`;
+        fpsList = [];
+        lastFPSupdate = totalTime.s;
+      }  else {
+        GameState.isOneSecondTickFrame = false;
+      }
 
       if (canvas.width != canvas.clientWidth || canvas.clientHeight != canvas.clientHeight) {
         canvas.width = canvas.clientWidth;
@@ -191,13 +266,7 @@ export class Game {
         gl.viewport(0, 0, canvas.width, canvas.height);
       }
 
-      // ------------------------------------------------------------------------------------------
-      // Animate Light
 
-      const lightOffset = 12;
-      lightPosition[0] = Math.sin(totalTime.s) * lightOffset;
-      lightPosition[2] = Math.cos(totalTime.s) * lightOffset;
-      console.log(lightPosition[0]);
       
       // ------------------------------------------------------------------------------------------
       // Input & Movement
@@ -237,16 +306,33 @@ export class Game {
         vec3.add(camera.target, spin, camera.position);
         camera.target[1] = camera.position[1] + camera.pitch;
 
-        if (camera.position[0] > 14)
-          camera.position[0] = 14;
-        if (camera.position[0] < -14)
-          camera.position[0] = -14;
-
-        if (camera.position[2] > 14)
-          camera.position[2] = 14;
-        if (camera.position[2] < -14)
-          camera.position[2] = -14;
+        if (input.getBindingByName('jump').pressed) {
+          fallingBlock.ridgidBody.addForce([0,150,0]);
+        }
+        input.flush();
       }
+
+      
+      
+      // ------------------------------------------------------------------------------------------
+      // Physics
+
+      if (GameState.isOneSecondTickFrame) {
+        vm.log(`\r\n\r\n`)
+        vm.log(`Position: ${fallingBlock.position[1]}`)
+      }
+
+      ForceRegistry.update(delta.s);
+      CollisionSystem.TestCollisions(gameObjects);
+     
+
+      // ------------------------------------------------------------------------------------------
+      // Animate Light
+
+      const lightOffset = 12;
+      lightPosition[0] = Math.sin(totalTime.s) * lightOffset;
+      lightPosition[2] = Math.cos(totalTime.s) * lightOffset;
+
 
 
       // ------------------------------------------------------------------------------------------
@@ -255,6 +341,15 @@ export class Game {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       gameObjects.forEach(gameObj => {
+
+        if (gameObj.ridgidBody != null) {
+          gameObjects.filter(x => x.ridgidBody != null).forEach(x => x.ridgidBody.integrate(delta.s));
+          if (GameState.isOneSecondTickFrame) {
+            vm.log(`Velocity: ${fallingBlock.ridgidBody.velocity}`);
+            vm.log(`Position: ${fallingBlock.position[1]}`);
+          }
+        }
+        
 
         gl.useProgram(gameObj.shader.program);
 
@@ -308,6 +403,8 @@ export class Game {
         gl.uniform2fv(gameObj.shader.uTextureScale, gameObj.texture.scale);
 
         gl.drawElements(gl.TRIANGLES, gameObj.buffers.indexLength, gl.UNSIGNED_SHORT, 0);
+
+        //gl.drawElements(gl.LINES, gameObj.buffers.indexLength, gl.UNSIGNED_SHORT, 0);
       });
 
       requestAnimationFrame(loop);

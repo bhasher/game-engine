@@ -9,7 +9,8 @@ class Input {
       { name: 'forward', key: 'w' },
       { name: 'back', key: 's' },
       { name: 'left', key: 'a' },
-      { name: 'right', key: 'd' }
+      { name: 'right', key: 'd' },
+      { name: 'jump', key: ' ' }
     ].map(x => {
       x.isDown = false;
       x.value = 0;
@@ -60,7 +61,7 @@ class Input {
       }
     }
     this.handleClick = event => {
-      this.bStealingMouse = !this.bStealingMouse;
+      this.bStealingMouse = (event.target.id === 'glCanvas') ? !this.bStealingMouse : false;
       this.bStealingMouse ? canvas.requestPointerLock() : document.exitPointerLock();
     }
     this.handleMouseMove = event => {

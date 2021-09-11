@@ -4,17 +4,92 @@
     <meta charset="UTF-8">
     <title>Game</title>
     <link rel="stylesheet" href="./global.css"/>
+    <style>
+      body {
+        display: flex;
+        flex-direction: row;
+      }
+      #glCanvas {
+        flex: 1 1 1;
+        align-self: stretch;
+      }
+      #fps-counter {
+        position: absolute;
+        color: white;
+        font-weight: bold;
+        top: 0;
+        right: 0;
+        left: auto;
+        pointer-events: none;
+      }
+      #sidebar {
+        flex: 1 0 1;
+        align-self: flex-end;
+        overflow-y: scroll;
+      }
+      #handle {
+        align-self: center;
+        width: 20px;
+        flex: 0 0 20px;
+        height: calc("100% - 50px");
+        background: #ddd;
+        cursor: ew-resize;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
   </head>
   <body>
+    <div id='fps-counter'><span id='fps'>0.00</span> fps</div>
     <canvas id='glCanvas' width="800" height="600"></canvas>
+    <div id='handle'></div>
+    <div id='sidebar'>
+      <pre>{{ shownJson }}</pre>
+    </div>
     <script>
       const game = require('./app/game');
-      console.log(__dirname);
       
       var canvas = document.querySelector("#glCanvas");;
       var gl = canvas.getContext("webgl2");;
         
       document.onload = game.start();
+
+      function handleMouseMove(ev, handler) {
+        var offset = ev.pageX;
+        if (offset > window.innerWidth - 20)
+          offset = window.innerWidth - 20;
+        document.getElementById('glCanvas').width = offset;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        document.querySelector('#sidebar').style.marginLeft = offset + 20;
+      }
+
+      document.querySelector('#handle').addEventListener('mousedown', (function(ev, handler) {
+        document.addEventListener('mousemove', handleMouseMove);
+      }));
+
+      document.addEventListener('mouseup', (function(e) {
+        document.removeEventListener('mousemove', handleMouseMove, false);
+      }));
+
+      
+
+      var vm = new Vue({
+        el: '#sidebar',
+        data: {
+          shownJson: '',
+          lineNum: 0,
+          vectors: []
+        },
+        methods: {
+          log(value) {
+            this.shownJson += `\r\n ${this.lineNum} | ${value}`;
+            this.lineNum++;
+            this.$nextTick(function() {
+              const sidebar = document.getElementById('sidebar');   
+              sidebar.scrollTop = sidebar.scrollHeight;
+            });
+          }
+        }
+      });
     </script>
   </body>
 </html>

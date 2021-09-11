@@ -7,6 +7,7 @@
   "scripts": {
     "build-mesh": "node ./src/mesh-importer/mesh-importer.js",
     "build": "tsc && gulp && npm start",
+    "build2": "tsc && gulp && npm start -- --test",
     "copy-files": "copyfiles *.html dist/ && copyfiles *.css dist/ && copyfiles *.frag dist/ && copyfiles *.vert dist/",
     "start": "electron ."
   },

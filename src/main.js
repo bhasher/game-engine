@@ -8,7 +8,7 @@ const { globalShortcut } = electron;
 
 */
 
-const { app, BrowserWindow, screen, globalShortcut } = require('electron');
+const { app, BrowserWindow, screen, globalShortcut, ipc } = require('electron');
 
 /** @type {Boolean} */
 const test = process.argv.includes('--test');
@@ -19,14 +19,15 @@ app.whenReady().then(()=> {
 
   const windowTemplate = (test) => {
     return {
+      title: "The Scarlett Engine",
       width: test ? width : 1400,
       height: test ? height : 600,
-      frame: false,
-      fullscreenable: test,
+      frame: !test,
+      fullscreenable: true,
       fullscreen: test,
       webPreferences: {
         nodeIntegration: true
-      }
+      },
     } 
   }
 
@@ -44,6 +45,10 @@ app.whenReady().then(()=> {
 
   globalShortcut.register('F5', () => {
     window.webContents.reload();
+  });
+
+  globalShortcut.register('F4', () => {
+    window.webContents.send('pause', null);
   });
 
 });

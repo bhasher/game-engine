@@ -13,14 +13,6 @@
         flex: 1 1 1;
         align-self: stretch;
       }
-      #fps-counter {
-        position: absolute;
-        color: white;
-        font-weight: bold;
-        top: 0;
-        left: 0;
-        pointer-events: none;
-      }
       #sidebar {
         flex: 1 0 1;
         height: 100%;
@@ -38,23 +30,25 @@
         background: #ddd;
         cursor: ew-resize;
       }
-      #code-dump {
+      .console {
         overflow-y: scroll;
         margin: 5px;
-        height: 50%;
+        height: 30%;
         border: solid 1px black;
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
   </head>
   <body>
-    <div id='fps-counter'><span id='fps'>0.00</span> fps</div>
     <canvas id='glCanvas' width="800" height="600"></canvas>
     <div id='handle'></div>
     <div id='sidebar'>
       <h1>Tools n stuff</h1>
-      <h3>Code Dump</h3>
-      <pre id='code-dump'>{{ shownJson }}</pre>
+      <p>FPS: {{ FPS }}</p>
+      <h3>Event Log</h3>
+      <pre class='console' id='event-log'>{{ eventLog }}</pre>
+      <h3>Console</h3>
+      <pre class='console' id='console-log'>{{ consoleLog }}</pre>
     </div>
     <script>
       const game = require('./app/game');
@@ -86,18 +80,31 @@
       var vm = new Vue({
         el: '#sidebar',
         data: {
-          shownJson: '',
-          lineNum: 0,
-          vectors: []
+          consoleLog: '',
+          consoleLineNum: 0,
+          eventLog: '',
+          eventLineNum: 0,
+          FPS: 0
         },
         methods: {
           log(value) {
-            this.shownJson += `\r\n ${this.lineNum} | ${value}`;
-            this.lineNum++;
+            this.consoleLog += `\r\n ${this.lineNum} | ${value}`;
+            this.consoleLineNum++;
             this.$nextTick(function() {
-              const sidebar = document.getElementById('code-dump');   
+              const sidebar = document.getElementById('event-log');   
               sidebar.scrollTop = sidebar.scrollHeight;
             });
+          },
+          logEvent(value) {
+            this.eventLog += `\r\n ${this.eventLineNum} | ${value}`;
+            this.eventLineNum++;
+            this.$nextTick(function() {
+              const sidebar = document.getElementById('console-log');   
+              sidebar.scrollTop = sidebar.scrollHeight;
+            });
+          },
+          setFPS(value) {
+            this.FPS = value;
           }
         }
       });

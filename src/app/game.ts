@@ -235,7 +235,6 @@ export class Game {
       ms: 0
     };
 
-    const fps = document.querySelector('#fps');
     var lastFPSupdate = 0;
     var fpsList = [];
 
@@ -259,15 +258,11 @@ export class Game {
       totalTime.ms += delta.ms;
       totalTime.s += delta.s;
 
-      var mfps = 1 / delta.s;
-      if (mfps < 60)
-        vm.log(`FPS: ${mfps}`);
-
       fpsList.push(delta.s)
       if (totalTime.s - lastFPSupdate >= 1) {
         GameState.isOneSecondTickFrame = true;
         var avg_fps = Math.round(avg_fps = 1 / (fpsList.reduce((a, b) => a + b) / fpsList.length));
-        fps.innerHTML = `${avg_fps}`;
+        vm.setFPS(avg_fps);
         fpsList = [];
         lastFPSupdate = totalTime.s;
       }  else {
@@ -281,8 +276,6 @@ export class Game {
         gl.viewport(0, 0, canvas.width, canvas.height);
       }
 
-
-      
       // ------------------------------------------------------------------------------------------
       // Input & Movement
 
@@ -324,24 +317,21 @@ export class Game {
 
         if (input.getBindingByName('jump').pressed) {
           pressedJump = true;
-          vm.log(`Jumped! Time: ${delta.s}`);
+          vm.logEvent(`Jumped! Time: ${delta.s}`);
         }
         input.flush();
       }
-
-      
       
       // ------------------------------------------------------------------------------------------
       // Physics
 
       ForceRegistry.update(delta.s);
       CollisionSystem.TestCollisions(gameObjects);
-     
+
       if (pressedJump) {
         player.ridgidBody.velocity[1] += 6;
         pressedJump = false;
-      }
-        
+      }    
 
       // ------------------------------------------------------------------------------------------
       // Animate Light
@@ -360,10 +350,7 @@ export class Game {
       gameObjects.forEach(gameObj => {
 
         if (gameObj.ridgidBody != null) {
-          gameObjects.filter(x => x.ridgidBody != null).forEach(x => x.ridgidBody.integrate(delta.s));
-          if (GameState.isOneSecondTickFrame) {
-            vm.log(`Position: ${gameObj.position[1]}`)
-          }        
+          gameObjects.filter(x => x.ridgidBody != null).forEach(x => x.ridgidBody.integrate(delta.s));    
         }
 
         

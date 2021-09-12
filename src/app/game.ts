@@ -77,7 +77,7 @@ export class Game {
     gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
-    gl.depthFunc(gl.LEQUAL);
+    gl.depthFunc(gl.LESS);
 
 
     // --------------------------------------------------------------------------------------------
@@ -105,6 +105,7 @@ export class Game {
 
     /* CUBES */
 
+    // The Ground
     var gameObjects: Array<GameObject> = [];
     for (var x = -16; x <= 16; x++) {
       for (var z = -16; z <= 16; z++) {
@@ -121,27 +122,31 @@ export class Game {
       }
     };
 
+    // Side Walls
     for (var z = -15; z <= 15; z++) {
-      gameObjects.push(new GameObject({
-        position: [-15, 1, z],
-        texture: textureRegistry.getTextureByName('rocks'),
-        shader: shaderRegistry.getShaderByName('cube'),
-        buffers: bufferRegistry.getByName('cube'),
-        collider: new AABBCollider({
-          halfSize: 0.5
-        })
-      }));
-      gameObjects.push(new GameObject({
-        position: [15, 1, z],
-        texture: textureRegistry.getTextureByName('rocks'),
-        shader: shaderRegistry.getShaderByName('cube'),
-        buffers: bufferRegistry.getByName('cube'),
-        collider: new AABBCollider({
-          halfSize: 0.5
-        })
-      }));
+      for (var y = 1; y <= 2; y++) {
+        gameObjects.push(new GameObject({
+          position: [-15, y, z],
+          texture: textureRegistry.getTextureByName('rocks'),
+          shader: shaderRegistry.getShaderByName('cube'),
+          buffers: bufferRegistry.getByName('cube'),
+          collider: new AABBCollider({
+            halfSize: 0.5
+          })
+        }));
+        gameObjects.push(new GameObject({
+          position: [15, y, z],
+          texture: textureRegistry.getTextureByName('rocks'),
+          shader: shaderRegistry.getShaderByName('cube'),
+          buffers: bufferRegistry.getByName('cube'),
+          collider: new AABBCollider({
+            halfSize: 0.5
+          })
+        }));
+      }    
     };
 
+    // Pillars
     for (var y = 1; y <= 4; y++) {
       [[3,2],[8,7],[2,-5]].forEach(pair=>{
         gameObjects.push(new GameObject({
@@ -157,7 +162,7 @@ export class Game {
     }
 
     const player = new GameObject({
-      position: [0, 30, 0],
+      position: [0, 10, 0],
       texture: textureRegistry.getTextureByName('rocks'),
       shader: shaderRegistry.getShaderByName('cube'),
       buffers: bufferRegistry.getByName('cube'),
@@ -198,7 +203,11 @@ export class Game {
         texture: textureRegistry.getTextureByName('barrel'),
         scale: [0.5, 0.5, 0.5],
         shader: shaderRegistry.getShaderByName('cube'),
-        buffers: bufferRegistry.getByName('barrel')
+        buffers: bufferRegistry.getByName('barrel'),
+        collider: new AABBCollider({
+          position: [0, 0, 0],
+          halfSize: 0.7
+        })
       }));
     });
 
@@ -230,6 +239,8 @@ export class Game {
     var lastFPSupdate = 0;
     var fpsList = [];
 
+    var pressedJump = false;
+
     const loop = now => {
       if (GameState.paused) {
         GameState.pausedTime = now;
@@ -247,6 +258,10 @@ export class Game {
 
       totalTime.ms += delta.ms;
       totalTime.s += delta.s;
+
+      var mfps = 1 / delta.s;
+      if (mfps < 60)
+        vm.log(`FPS: ${mfps}`);
 
       fpsList.push(delta.s)
       if (totalTime.s - lastFPSupdate >= 1) {
@@ -308,7 +323,7 @@ export class Game {
         camera.target[1] = camera.position[1] + camera.pitch;
 
         if (input.getBindingByName('jump').pressed) {
-          player.ridgidBody.velocity[1] += 6;
+          pressedJump = true;
           vm.log(`Jumped! Time: ${delta.s}`);
         }
         input.flush();
@@ -322,6 +337,11 @@ export class Game {
       ForceRegistry.update(delta.s);
       CollisionSystem.TestCollisions(gameObjects);
      
+      if (pressedJump) {
+        player.ridgidBody.velocity[1] += 6;
+        pressedJump = false;
+      }
+        
 
       // ------------------------------------------------------------------------------------------
       // Animate Light
@@ -341,8 +361,9 @@ export class Game {
 
         if (gameObj.ridgidBody != null) {
           gameObjects.filter(x => x.ridgidBody != null).forEach(x => x.ridgidBody.integrate(delta.s));
-          if (GameState.isOneSecondTickFrame)
+          if (GameState.isOneSecondTickFrame) {
             vm.log(`Position: ${gameObj.position[1]}`)
+          }        
         }
 
         

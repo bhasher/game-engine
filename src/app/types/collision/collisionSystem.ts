@@ -1,7 +1,5 @@
 import { GameObject } from '../gameObject';
 import { CollisionInfo, ColliderType, AABBCollider, CircleCollider } from './collider';
-import { GameState } from '../../gameState';
-import { Game } from '../../game';
 const { vec3 } = require('gl-matrix');
 
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
@@ -20,7 +18,7 @@ export class CollisionSystem {
 
   static ResolveCollision(collisionInfo: CollisionInfo) {
     if (collisionInfo.penetration <= 0) {
-      vm.log(`Penetration: ${collisionInfo.penetration}`);
+      //vm.log(`Penetration: ${collisionInfo.penetration}`);
       return;
     }
 

@@ -12,7 +12,7 @@ export class TextureRegistry {
 
 export class Texture {
 
-  static PATH = '../dist/assets/png/';
+  static PATH = '/assets/png/';
 
   name: string;
   texture: WebGLTexture;

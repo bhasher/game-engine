@@ -1,5 +1,4 @@
-const fs = require('fs');
-
+import { FileManager } from './fileManager';
 export class BuffersRegistry {
   buffers: Array<Buffers>;
   
@@ -14,7 +13,8 @@ export class BuffersRegistry {
 
 export class Buffers {
   get path() {
-    return `./dist/assets/mesh/${this.name}.json`;
+    //return path.normalize(path.join(__dirname, '../..',  `assets/mesh/${this.name}.json`));
+    return `assets/mesh/${this.name}.json`;
   }
 
   name: string;
@@ -29,7 +29,7 @@ export class Buffers {
     this.init();
   }
   init() {
-    var mesh = JSON.parse(fs.readFileSync(this.path));
+    var mesh = JSON.parse(FileManager.ReadFileSync(this.path));
 
     this.positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);

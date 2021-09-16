@@ -1,7 +1,6 @@
 class Input {
   constructor() {
     const canvas = document.querySelector("#glCanvas");
-    canvas.requestPointerLock()
     
     this.bStealingMouse = true;
 

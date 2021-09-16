@@ -4,15 +4,15 @@ import { BuffersRegistry, Buffers } from './types/buffers';
 import { GameObject } from './types/gameObject';
 import { RidgidBody } from './types/physics/ridgidBody';
 import { ForceRegistration, ForceRegistry } from './types/physics/forceRegistry';
-import { ForceGenerator } from './types/physics/forceGenerator';
 import { GravityGenerator } from './types/physics/gravityGenerator';
 import { CollisionSystem } from './types/collision/collisionSystem';
-import { Collider, CircleCollider, AABBCollider } from './types/collision/collider';
-const { glMatrix, mat4, vec3, vec2 } = require('gl-matrix');
-const input = require('./input');
-const fs = require('fs');
-import { ipcRenderer } from 'electron';
+import { CircleCollider, AABBCollider } from './types/collision/collider';
+import { glMatrix, mat4, vec3 } from 'gl-matrix';
+import * as input from './input';
+//import { ipcRenderer } from 'electron';
 import { GameState } from './gameState';
+import { createPublicKey } from 'crypto';
+import { FileManager } from './types/fileManager';
 
 export class Game {
 
@@ -38,11 +38,9 @@ export class Game {
         ],
         data: [new ShaderData({
           file: 'cube.vert',
-          src: fs.readFileSync(`${__dirname}/shaders/cube.vert`),
           type: gl.VERTEX_SHADER
         }), new ShaderData({
           file: 'cube.frag',
-          src: fs.readFileSync(`${__dirname}/shaders/cube.frag`),
           type: gl.FRAGMENT_SHADER,
         })]
       }),
@@ -55,15 +53,17 @@ export class Game {
         ],
         data: [{
           file: 'basic.vert',
-          src: fs.readFileSync(`${__dirname}/shaders/basic.vert`),
           type: gl.VERTEX_SHADER
         }, {
           file: 'basic.frag',
-          src: fs.readFileSync(`${__dirname}/shaders/basic.frag`),
           type: gl.FRAGMENT_SHADER,
         }]
       })
     ]);
+
+    // --------------------------------------------------------------------------------------------
+    // Meshes
+    //MeshRegistery.loadMeshes(['cube', 'barrel']);
 
     // --------------------------------------------------------------------------------------------
     // BUFFERS
@@ -73,11 +73,7 @@ export class Game {
       new Buffers('barrel')
     ]);
 
-    gl.clearColor(0.1, 0.0, 0.8, 1.0);
-    gl.clearDepth(1);
-    gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.CULL_FACE);
-    gl.depthFunc(gl.LESS);
+
 
 
     // --------------------------------------------------------------------------------------------
@@ -94,7 +90,7 @@ export class Game {
     // Object Models
 
     const camera = {
-      position: [0, 1.77, 0],
+      position: new Float32Array([0, 1.77, 0]),
       target: vec3.create(),
       yaw: 0,
       pitch: 0,
@@ -214,15 +210,20 @@ export class Game {
     // --------------------------------------------------------------------------------------------
     // Electron IPC
 
-    ipcRenderer.on('pause', (event, store) => {
-      GameState.paused = !GameState.paused;
-      if (!GameState.paused)
-        requestAnimationFrame(loop);
-    });
+    // ipcRenderer.on('pause', (event, store) => {
+    //   GameState.paused = !GameState.paused;
+    //   if (!GameState.paused)
+    //     requestAnimationFrame(loop);
+    // });
 
     // --------------------------------------------------------------------------------------------
     // Loop
 
+    gl.clearColor(0.1, 0.0, 0.8, 1.0);
+    gl.clearDepth(1);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    gl.depthFunc(gl.LESS);
 
     var then = 0;
     const delta = {
@@ -258,11 +259,12 @@ export class Game {
       totalTime.ms += delta.ms;
       totalTime.s += delta.s;
 
-      fpsList.push(delta.s)
+      vm.setFPS(Math.round(1 / delta.s));
+      fpsList.push(1 / delta.s);
       if (totalTime.s - lastFPSupdate >= 1) {
         GameState.isOneSecondTickFrame = true;
-        var avg_fps = Math.round(avg_fps = 1 / (fpsList.reduce((a, b) => a + b) / fpsList.length));
-        vm.setFPS(avg_fps);
+        var avg_fps = Math.round(avg_fps = (fpsList.reduce((a, b) => a + b) / fpsList.length));
+        vm.setAvgFPS(avg_fps);
         fpsList = [];
         lastFPSupdate = totalTime.s;
       }  else {
@@ -308,7 +310,7 @@ export class Game {
         vec3.multiply(moveDirection, moveDirection, [moveMultiplier, 0, moveMultiplier]);
         vec3.rotateY(moveDirection, moveDirection, [0, 0, 0], camera.yaw);
         vec3.add(player.position, player.position, moveDirection);
-        camera.position = [player.position[0], player.position[1] + 1.27, player.position[2]];
+        camera.position = new Float32Array([player.position[0], player.position[1] + 1.27, player.position[2]]);
 
         const spin = vec3.create();
         vec3.rotateY(spin, [0, 0, -1], [0, 0, 0], camera.yaw);
@@ -317,7 +319,6 @@ export class Game {
 
         if (input.getBindingByName('jump').pressed) {
           pressedJump = true;
-          vm.logEvent(`Jumped! Time: ${delta.s}`);
         }
         input.flush();
       }
@@ -336,9 +337,9 @@ export class Game {
       // ------------------------------------------------------------------------------------------
       // Animate Light
 
-      const lightOffset = 12;
-      lightPosition[0] = Math.sin(totalTime.s) * lightOffset;
-      lightPosition[2] = Math.cos(totalTime.s) * lightOffset;
+      // const lightOffset = 12;
+      // lightPosition[0] = Math.sin(totalTime.s) * lightOffset;
+      // lightPosition[2] = Math.cos(totalTime.s) * lightOffset;
 
 
 
@@ -346,7 +347,7 @@ export class Game {
       // Render Game Objects
 
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
+      
       gameObjects.forEach(gameObj => {
 
         if (gameObj.ridgidBody != null) {
@@ -355,8 +356,11 @@ export class Game {
 
         
         
-
-        gl.useProgram(gameObj.shader.program);
+        if (gameObj.shader.program != shaderRegistry.lastUsedShader) {
+          gl.useProgram(gameObj.shader.program);
+          shaderRegistry.lastUsedShader = gameObj.shader.program;
+        }
+        
 
         gl.bindBuffer(gl.ARRAY_BUFFER, gameObj.buffers.positionBuffer);
         gl.vertexAttribPointer(gameObj.shader.aPosition, 3, gl.FLOAT, false, 0, 0);
@@ -395,7 +399,7 @@ export class Game {
         gl.uniformMatrix4fv(gameObj.shader.uProjectionMatrix, false, projectionMatrix);
         gl.uniformMatrix4fv(gameObj.shader.uViewMatrix, false, viewMatrix);
         gl.uniformMatrix4fv(gameObj.shader.uModelMatrix, false, modelMatrix);
-
+      
         if (gameObj.shader.uViewPosition)
           gl.uniform3fv(gameObj.shader.uViewPosition, camera.position);
 
@@ -418,4 +422,5 @@ export class Game {
   }
 };
 
-module.exports = new Game();
+var game = new Game();
+game.start();

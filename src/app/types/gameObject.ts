@@ -3,15 +3,18 @@ import { Texture } from "./texture";
 import { Buffers } from './buffers';
 import { RidgidBody } from './physics/ridgidBody';
 import { Collider } from "./collision/collider";
+import { Mesh } from "./mesh";
+import { ReadonlyVec3 } from "gl-matrix";
 
 export class GameObject {
-  position: Array<number>;
+  position: Float32Array;
   ridgidBody: RidgidBody;
-  scale: Array<number>;
+  scale: ReadonlyVec3;
   rotation: Array<number>;
   texture: Texture;
   shader: Shader;
   buffers: Buffers;
+  mesh: Mesh;
   collider: Collider;
 
   constructor(object: Object) {

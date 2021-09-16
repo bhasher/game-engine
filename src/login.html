@@ -1,0 +1,73 @@
+<html>
+  <head>
+    <title>Login</title>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+      }
+      .container {
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        align-content: center;
+        flex: 1;
+      }
+      .container > * {
+        flex: 1;
+        max-width: fit-content;
+      }
+      button {
+        background-color: #555555; /* Green */
+        border: 1px solid #ccc;
+        border-radius: 1rem;
+        color: white;
+        padding: 12px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+      }
+      input[type=password] {
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 1rem;
+        resize: vertical;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div>
+        <input type='password' id='password' placeholder='Password'>
+        <button type='button' onclick='login()'>Login</button>
+      </div>
+    </div>
+    <script>
+      document.getElementById('password').addEventListener('keydown', function onEvent(event) {
+          if (event.key === "Enter") {
+              login();
+          }
+      });
+
+      function login() {
+        var req = new XMLHttpRequest();
+        req.onreadystatechange = function() {
+            if (this.status == 200) {
+              document.getElementById('password').value = '';
+              console.log('yes!');
+              window.location.reload();
+            }
+        };
+        req.open("POST", "/login", true);
+        req.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        
+        req.send(JSON.stringify({ password: document.getElementById('password').value }));
+      }
+    </script>
+  </body>
+</html>

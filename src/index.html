@@ -3,8 +3,19 @@
   <head>
     <meta charset="UTF-8">
     <title>Game</title>
-    <link rel="stylesheet" href="./global.css"/>
     <style>
+      html, body {
+        margin: 0px;
+        padding: 0px;
+        width: 100%;
+        height: 100%;
+        overflow-x: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
       body {
         display: flex;
         flex-direction: row;
@@ -44,19 +55,18 @@
     <div id='handle'></div>
     <div id='sidebar'>
       <h1>Tools n stuff</h1>
+      <button v-on:click='logout'>Logout</button>
       <p>FPS: {{ FPS }}</p>
+      <p>AVG FPS: {{ avgFPS }}</p>
       <h3>Event Log</h3>
       <pre class='console' id='event-log'>{{ eventLog }}</pre>
       <h3>Console</h3>
       <pre class='console' id='console-log'>{{ consoleLog }}</pre>
     </div>
     <script>
-      const game = require('./app/game');
-      
+
       var canvas = document.querySelector("#glCanvas");;
-      var gl = canvas.getContext("webgl2");;
-        
-      document.onload = game.start();
+      var gl = canvas.getContext("webgl2");
 
       function handleMouseMove(ev, handler) {
         var offset = ev.pageX;
@@ -84,7 +94,8 @@
           consoleLineNum: 0,
           eventLog: '',
           eventLineNum: 0,
-          FPS: 0
+          FPS: 0,
+          avgFPS: 0
         },
         methods: {
           log(value) {
@@ -103,8 +114,15 @@
               sidebar.scrollTop = sidebar.scrollHeight;
             });
           },
+          setAvgFPS(value) {
+            this.avgFPS = value;
+          },
           setFPS(value) {
             this.FPS = value;
+          },
+          logout() {
+            console.log('logout');
+            window.location.href = '/logout';
           }
         }
       });

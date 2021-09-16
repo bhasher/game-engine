@@ -1,3 +1,5 @@
 node_modules/
 content/
 dist/
+game-engine-win32-x64/
+dist-web/

@@ -5,9 +5,12 @@ const allUniforms = [
   'uSampler', 'uTextureScale', 'uViewPosition', 'uLightPosition'
 ]
 
+import { FileManager } from './fileManager';
+
 export class ShaderRegistry {
   shaders: Array<Shader>;
   gl: WebGLRenderingContext;
+  lastUsedShader: WebGLProgram;
   getShaderByName(name: string) {
     return this.shaders.filter(x => x.name == name)[0] || null;
   }
@@ -16,6 +19,13 @@ export class ShaderRegistry {
     this.initializeShaders();
   }
   initializeShaders() {
+
+    this.shaders.forEach(shader => {
+      shader.data.forEach(x => {
+        x.src = FileManager.ReadFileSync(`assets/shaders/${x.file}`);
+      });
+    });
+
     this.shaders.forEach(shader => {
       shader.program = gl.createProgram();
 

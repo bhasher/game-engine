@@ -26,8 +26,8 @@ app.whenReady().then(()=> {
       fullscreenable: true,
       fullscreen: test,
       webPreferences: {
-        nodeIntegration: true
-        //nodeIntegrationInWorker: true
+        nodeIntegration: true,
+        nodeIntegrationInWorker: true
       },
     } 
   }
